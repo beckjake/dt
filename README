@@ -1,0 +1,14 @@
+A tool for running dbt unit/integration tests locally.
+
+You must have appropriate profiles / environment variables set up, I forget what those are, sorry!
+
+--help is useful :)
+
+Python version defaults to 3.6
+No args defaults to `dt -i --pg
+
+To run postgres integration tests: `dt -i --pg` (this is the default)
+To run postgres integration tests, clearing `dbt.log` beforehand: `dt -il --pg`
+To run postgres + redshift integration tests: `dt -i --pg --rs`
+To run python 2.7 unit tests: `dt -v 27 -u`
+To run python 2.7 unit + integration tests, and pep8: `dt -v 27 -iup`
