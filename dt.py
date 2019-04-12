@@ -21,13 +21,15 @@ _SHORTHAND = {
     'snowflake': 'snowflake',
 }
 
+
 def type_convert(types: str):
     result = set()
     for t in types.split(','):
         try:
             result.add(_SHORTHAND[t])
         except KeyError:
-            raise ValueError('value "{}" not allowed, must be one of [{}]'
+            raise ValueError(
+                'value "{}" not allowed, must be one of [{}]'
                 .format(t, ','.join('"{}"'.format(k) for k in _SHORTHAND)))
     return result
 
@@ -38,13 +40,12 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--integration', action='store_true', help='run integration tests')
     parser.add_argument('-u', '--unit', action='store_true', help='run unit tests')
-    parser.add_argument('-p', '--pep8', action='store_true', help='run pep8')
+    parser.add_argument('-f', '--flake8', action='store_true', help='run flake8')
     parser.add_argument('-v', '--python-version',
-        default='36', choices=['27', '36'],
-        help='what python version to run'
-    )
+                        default='36', choices=['27', '36'],
+                        help='what python version to run')
     parser.add_argument(
-        '-t','--types',
+        '-t', '--types',
         default=None,
         help='The types of tests to run, if this is an integration run, as csv'
     )
@@ -163,12 +164,11 @@ def run_unit(parsed):
     _run_args(args)
 
 
-def run_pep8(parsed):
-    args = ['pep8']
+def run_flake8(parsed):
+    args = ['flake8']
     args.extend(parsed.extra)
     args.append('dbt')
     _run_args(args)
-
 
 
 def main(argv=None):
@@ -185,8 +185,8 @@ def main(argv=None):
         run_integration(parsed)
     if parsed.unit:
         run_unit(parsed)
-    if parsed.pep8:
-        run_pep8(parsed)
+    if parsed.flake8:
+        run_flake8(parsed)
 
 
 if __name__ == '__main__':
