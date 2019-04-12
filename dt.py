@@ -8,6 +8,8 @@ _SHORTHAND = {
     'p': 'postgres',
     'pg': 'postgres',
     'postgres': 'postgres',
+    'pr': 'presto',
+    'presto': 'presto',
     'r': 'redshift',
     'rs': 'redshift',
     'redshift': 'redshift',
@@ -26,7 +28,7 @@ def type_convert(types: str):
             result.add(_SHORTHAND[t])
         except KeyError:
             raise ValueError('value "{}" not allowed, must be one of [{}]'
-                .format(','.join('"{}"'.format(k) for k in _SHORTHAND)))
+                .format(t, ','.join('"{}"'.format(k) for k in _SHORTHAND)))
     return result
 
 
@@ -81,6 +83,11 @@ def parse_args(argv):
         '--snowflake', '--sf',
         action='store_true',
         help='run snowflake tests'
+    )
+    parser.add_argument(
+        '--presto', '--pr',
+        action='store_true',
+        help='run presto tests'
     )
 
     parser.add_argument(
