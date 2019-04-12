@@ -73,6 +73,11 @@ def parse_args(argv):
         help='Specify if the DBT_TEST_SINGLE_THREADED environment variable should be set'
     )
     parser.add_argument(
+        '--coverage',
+        action='store_true',
+        help='Make a coverage report and print it to the terminal'
+    )
+    parser.add_argument(
         '--postgres', '--pg',
         action='store_true',
         help='run postgres tests'
@@ -153,6 +158,8 @@ def _docker_tests_args(parsed):
     args.extend(['--', '-s'])
     if parsed.stop:
         args.append('-x')
+    if parsed.coverage:
+        args.extend(('--cov', 'dbt', '--cov-branch', '--cov-report', 'term'))
     return args
 
 
@@ -168,8 +175,9 @@ def _add_extras(args, parsed, default):
 
 def run_integration(parsed):
     args = _docker_tests_args(parsed)
-    for testtype in parsed.types:
-        args.extend(('-a', 'type={}'.format(testtype)))
+    if parsed.types:
+        args.append('-m')
+        args.append(' or '.join('profile_{}'.format(t) for t in parsed.types))
     _add_extras(args, parsed, ['test/integration'])
     _run_args(args)
 
