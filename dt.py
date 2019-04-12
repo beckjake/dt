@@ -62,8 +62,15 @@ def parse_args(argv):
 
     parser.add_argument(
         '-a', '--test-args',
-        nargs='+',
+        action='append',
+        nargs='?',
+        default=[],
         help='Specify the tests, tacked on to the end'
+    )
+    parser.add_argument(
+        '-1', '--single-threaded',
+        action='store_true',
+        help='Specify if the DBT_TEST_SINGLE_THREADED environment variable should be set'
     )
     parser.add_argument(
         '--postgres', '--pg',
@@ -93,11 +100,15 @@ def parse_args(argv):
 
     parser.add_argument(
         '--docker-args',
-        nargs='+',
+        action='append',
+        nargs='?',
+        default=[],
         help='Specify docker-compose args')
     parser.add_argument(
         '--tox-args',
-        nargs='+',
+        action='append',
+        nargs='?',
+        default=[],
         help='Specify tox args')
     parser.add_argument(
         'extra',
@@ -125,12 +136,15 @@ def parse_args(argv):
 
 def _run_args(args):
     print('args={}'.format(args))
-    subprocess.run(args)
+    result = subprocess.run(args)
+    result.check_returncode()
 
 
 def _docker_tests_args(parsed):
     tox_env = 'explicit-py{}'.format(parsed.python_version)
     args = ['docker-compose', 'run', '--rm']
+    if parsed.single_threaded:
+        args.extend(('-e', 'DBT_TEST_SINGLE_THREADED=y'))
     if parsed.docker_args:
         args.extend(parsed.docker_args)
     args.extend(['test', 'tox', '-e', tox_env])
@@ -139,35 +153,45 @@ def _docker_tests_args(parsed):
     args.extend(['--', '-s'])
     if parsed.stop:
         args.append('-x')
-    if parsed.extra:
-        args.extend(parsed.extra)
     return args
+
+
+def _add_extras(args, parsed, default):
+    if parsed.test_args or parsed.extra:
+        if parsed.test_args:
+            args.extend(parsed.test_args)
+        if parsed.extra:
+            args.extend(parsed.extra)
+    else:
+        args.extend(default)
 
 
 def run_integration(parsed):
     args = _docker_tests_args(parsed)
     for testtype in parsed.types:
         args.extend(('-a', 'type={}'.format(testtype)))
-    if parsed.test_args:
-        args.extend('test/integration/{}'.format(a) for a in parsed.test_args)
-    else:
-        args.append('test/integration')
+    _add_extras(args, parsed, ['test/integration'])
     _run_args(args)
 
 
 def run_unit(parsed):
     args = _docker_tests_args(parsed)
-    if parsed.test_args:
-        args.extend(parsed.test_args)
-    else:
-        args.append('test/unit')
+    _add_extras(args, parsed, ['test/unit'])
     _run_args(args)
 
 
 def run_flake8(parsed):
-    args = ['flake8']
+    args = ['flake8', '--select', 'E,W,F', '--ignore', 'W504']
     args.extend(parsed.extra)
-    args.append('dbt')
+    if os.path.exists('dbt/main.py'):
+        args.append('dbt')
+    elif os.path.exists('core/dbt/main.py'):
+        args.append('core/dbt')
+        for adapter in ('postgres', 'redshift', 'bigquery', 'snowflake'):
+            args.append('plugins/{}/dbt'.format(adapter))
+    else:
+        print('No main.py found!')
+        raise RuntimeError('No main.py')
     _run_args(args)
 
 
@@ -181,12 +205,17 @@ def main(argv=None):
         if os.path.exists(path):
             os.remove(path)
     cmds = []
-    if parsed.integration:
-        run_integration(parsed)
-    if parsed.unit:
-        run_unit(parsed)
-    if parsed.flake8:
-        run_flake8(parsed)
+    try:
+        if parsed.flake8:
+            run_flake8(parsed)
+        if parsed.unit:
+            run_unit(parsed)
+        if parsed.integration:
+            run_integration(parsed)
+    except subprocess.CalledProcessError:
+        print('failed!')
+        sys.exit(1)
+    print('success!')
 
 
 if __name__ == '__main__':
