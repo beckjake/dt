@@ -61,13 +61,6 @@ def parse_args(argv):
     )
 
     parser.add_argument(
-        '-a', '--test-args',
-        action='append',
-        nargs='?',
-        default=[],
-        help='Specify the tests, tacked on to the end'
-    )
-    parser.add_argument(
         '-1', '--single-threaded',
         action='store_true',
         help='Specify if the DBT_TEST_SINGLE_THREADED environment variable should be set'
@@ -78,29 +71,9 @@ def parse_args(argv):
         help='Make a coverage report and print it to the terminal'
     )
     parser.add_argument(
-        '--postgres', '--pg',
+        '-p', '--pdb',
         action='store_true',
-        help='run postgres tests'
-    )
-    parser.add_argument(
-        '--redshift', '--rs',
-        action='store_true',
-        help='run redshift tests'
-    )
-    parser.add_argument(
-        '--bigquery', '--bq',
-        action='store_true',
-        help='run bigquery tests'
-    )
-    parser.add_argument(
-        '--snowflake', '--sf',
-        action='store_true',
-        help='run snowflake tests'
-    )
-    parser.add_argument(
-        '--presto', '--pr',
-        action='store_true',
-        help='run presto tests'
+        help='Drop into ipdb on failures'
     )
 
     parser.add_argument(
@@ -116,6 +89,19 @@ def parse_args(argv):
         default=[],
         help='Specify tox args')
     parser.add_argument(
+        '--pylint-args',
+        action='append',
+        nargs='?',
+        default=[],
+        help='Specify pylint args')
+    parser.add_argument(
+        '-a', '--test-args',
+        action='append',
+        nargs='?',
+        default=[],
+        help='Specify the tests, tacked on to the end'
+    )
+    parser.add_argument(
         'extra',
         nargs='*'
     )
@@ -124,17 +110,7 @@ def parse_args(argv):
     if parsed.types:
         parsed.types = type_convert(parsed.types)
     else:
-        parsed.types = set()
-    if parsed.postgres:
-        parsed.types.add('postgres')
-    if parsed.redshift:
-        parsed.types.add('redshift')
-    if parsed.bigquery:
-        parsed.types.add('bigquery')
-    if parsed.snowflake:
-        parsed.types.add('snowflake')
-    if not parsed.types:
-        parsed.types.update({'postgres', 'redshift', 'bigquery', 'snowflake'})
+        parsed.types = {'postgres', 'redshift', 'bigquery', 'snowflake'}
 
     return parsed
 
@@ -156,10 +132,14 @@ def _docker_tests_args(parsed):
     if parsed.tox_args:
         args.extend(parsed.tox_args)
     args.extend(['--', '-s'])
+    if parsed.pdb:
+        args.extend(['--pdb', '--pdbcls=IPython.terminal.debugger:Pdb'])
     if parsed.stop:
         args.append('-x')
     if parsed.coverage:
         args.extend(('--cov', 'dbt', '--cov-branch', '--cov-report', 'term'))
+    if parsed.pylint_args:
+        args.extend(parsed.pylint_args)
     return args
 
 
