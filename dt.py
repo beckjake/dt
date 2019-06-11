@@ -89,7 +89,7 @@ def parse_args(argv):
     parser.add_argument(
         '-p', '--pdb',
         action='store_true',
-        help='Drop into ipdb on failures'
+        help='Drop into ipdb on failures, implies "--no-multi"'
     )
     parser.add_argument(
         '-k',
@@ -97,6 +97,12 @@ def parse_args(argv):
         nargs='?',
         default=[],
         help='Pass-through to pytest, test selector expression'
+    )
+    parser.add_argument(
+        '--no-multi',
+        action='store_false',
+        dest='multi',
+        help='Turn off multiprocessing'
     )
 
     parser.add_argument(
@@ -153,7 +159,6 @@ def parse_args(argv):
     return parsed
 
 
-
 class ArgBuilder(object):
 
     def __init__(self, parsed):
@@ -190,12 +195,15 @@ class PytestBuilder(ArgBuilder):
         self.args.append('-s')
         if self.parsed.pdb:
             self.args.extend(['--pdb', '--pdbcls=IPython.terminal.debugger:Pdb'])
+            self.parsed.multi = False
         if self.parsed.stop:
             self.args.append('-x')
         if self.parsed.coverage:
             self.args.extend(('--cov', 'dbt', '--cov-branch', '--cov-report', 'term'))
         for arg in self.parsed.k:
             self.args.extend(('-k', arg))
+        if self.parsed.multi:
+            self.args.extend(('-n', 'auto'))
 
         if not self.add_extra_pytest_args():
             self.args.extend(self.DEFAUlTS)
@@ -257,7 +265,6 @@ class Flake8Builder(ArgBuilder):
                 self.args.append('core/dbt')
                 for adapter in ('postgres', 'redshift', 'bigquery', 'snowflake'):
                     self.args.append('plugins/{}/dbt'.format(adapter))
-
 
 
 def main(argv=None):
