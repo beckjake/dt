@@ -36,7 +36,7 @@ def type_convert(types: str):
 
 def parse_args(argv):
     if not argv:
-        argv.extend(['-i', '--pg'])
+        argv.extend(['-it', 'pg'])
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-f', '--flake8',
